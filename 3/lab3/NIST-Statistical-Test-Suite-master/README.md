@@ -1,0 +1,279 @@
+# The NIST Statistical Test Suite
+
+This repository contains the code for testing random number generators published by the US National Institute of Science and Technology (NIST). The code was created to accompany NIST SP-800-22 R1a, a copy of which can be found in this repository as [`nistspecialpublication800-22r1a.pdf`][1] (ref \[1]).
+
+[1]: (assets/nistspecialpublication800-22r1a.pdf)
+
+Given that this is rather useful code, and that it was unavailable in January 2019 due to the US government shutdown, I thought it would be useful to publish this for reference. (Call to action for civic hackers: we need a curated site that links to this kind of material.)
+
+**Contents:**
+<!-- TOC depthfrom:2 updateonsave:true -->
+
+- [Import structure](#import-structure)
+- [How to build on Ubuntu](#how-to-build-on-ubuntu)
+    - [Sample run for known input](#sample-run-for-known-input)
+    - [Sample test results](#sample-test-results)
+- [Notes on using the package](#notes-on-using-the-package)
+    - [Test input scripts](#test-input-scripts)
+    - [Result locations](#result-locations)
+    - [Bitstreams, the parameter to assess, and data files](#bitstreams-the-parameter-to-assess-and-data-files)
+    - [Random Number Generators and floating-point data](#random-number-generators-and-floating-point-data)
+- [Anomalies](#anomalies)
+
+<!-- /TOC -->
+
+## Import structure
+
+So that we can add the usual GitHub sugar and keep clear "what is new here" vs "what came from NIST", the NIST code is in the subdirectory `sts`.
+
+## How to build on Ubuntu
+
+Because git doesn't store empty directories, you need to do some setup after initial checkout. This repository has a script for that, at the top level: `setup.sh`. The setup procedure is:
+
+```console
+$ ./setup.sh
+Setting up directories in ./sts/experiments.
+Created ./sts/obj.
+Created ./sts/experiments/AlgorithmTesting.
+Created ./sts/experiments/BBS.
+Created ./sts/experiments/CCG.
+Created ./sts/experiments/G-SHA1.
+Created ./sts/experiments/LCG.
+Created ./sts/experiments/MODEXP.
+Created ./sts/experiments/MS.
+Created ./sts/experiments/QCG1.
+Created ./sts/experiments/QCG2.
+Created ./sts/experiments/XOR.
+Creating the subdirectories via ./sts/experiments/create-dir-script.
+create-dir-script succeeded.
+Directories are set up. Change directory to ./sts and say 'make'!
+$ cd ./sts
+$ make
+```
+
+The build procedure creates an executable, `sts/assess`, which is usually run interactively to do a test. See Section 5.6 of [[1]].
+
+### Sample run for known input
+
+Here's a transcript of a full run.
+
+```console
+$ ./assess 100000
+           G E N E R A T O R    S E L E C T I O N 
+           ______________________________________
+
+    [0] Input File                 [1] Linear Congruential
+    [2] Quadratic Congruential I   [3] Quadratic Congruential II
+    [4] Cubic Congruential         [5] XOR
+    [6] Modular Exponentiation     [7] Blum-Blum-Shub
+    [8] Micali-Schnorr             [9] G Using SHA-1
+
+   Enter Choice: 0
+
+
+		User Prescribed Input File: data/data.pi
+
+                S T A T I S T I C A L   T E S T S
+                _________________________________
+
+    [01] Frequency                       [02] Block Frequency
+    [03] Cumulative Sums                 [04] Runs
+    [05] Longest Run of Ones             [06] Rank
+    [07] Discrete Fourier Transform      [08] Nonperiodic Template Matchings
+    [09] Overlapping Template Matchings  [10] Universal Statistical
+    [11] Approximate Entropy             [12] Random Excursions
+    [13] Random Excursions Variant       [14] Serial
+    [15] Linear Complexity
+
+         INSTRUCTIONS
+            Enter 0 if you DO NOT want to apply all of the
+            statistical tests to each sequence and 1 if you DO.
+
+   Enter Choice: 1
+
+        P a r a m e t e r   A d j u s t m e n t s
+        -----------------------------------------
+    [1] Block Frequency Test - block length(M):         128
+    [2] NonOverlapping Template Test - block length(m): 9
+    [3] Overlapping Template Test - block length(m):    9
+    [4] Approximate Entropy Test - block length(m):     10
+    [5] Serial Test - block length(m):                  16
+    [6] Linear Complexity Test - block length(M):       500
+
+   Select Test (0 to continue): 0
+
+   How many bitstreams? 10
+
+   Input File Format:
+    [0] ASCII - A sequence of ASCII 0's and 1's
+    [1] Binary - Each byte in data file contains 8 bits of data
+
+   Select input mode:  0
+
+     Statistical Testing In Progress.........
+
+     Statistical Testing Complete!!!!!!!!!!!!
+$
+```
+
+The test results for this test show up in `sts/experiments/AlgorithmTesting/finalAnalysisReport.txt`. This test is checking the bits from a transcendental number (pi), and so all the tests pass.
+
+If you run a different test, things show up in different places! See [Result Locations](#result-locations), below.
+
+### Sample test results
+
+Here are the results generated by [the sample run](#sample-run-for-known-input).
+
+```console
+$ cat experiments/AlgorithmTesting/finalAnalysisReport.txt
+------------------------------------------------------------------------------
+RESULTS FOR THE UNIFORMITY OF P-VALUES AND THE PROPORTION OF PASSING SEQUENCES
+------------------------------------------------------------------------------
+   generator is <data/data.pi>
+------------------------------------------------------------------------------
+ C1  C2  C3  C4  C5  C6  C7  C8  C9 C10  P-VALUE  PROPORTION  STATISTICAL TEST
+------------------------------------------------------------------------------
+  1   1   3   0   0   2   1   0   1   1  0.534146     10/10      Frequency
+  1   2   1   0   2   2   1   0   1   0  0.739918     10/10      BlockFrequency
+  1   1   1   2   1   0   0   2   1   1  0.911413     10/10      CumulativeSums
+  1   2   0   1   1   1   1   2   1   0  0.911413     10/10      CumulativeSums
+  0   4   1   1   0   2   0   1   0   1  0.122325     10/10      Runs
+  0   1   0   4   1   0   1   1   1   1  0.213309     10/10      LongestRun
+  1   1   0   1   1   1   2   1   0   2  0.911413     10/10      Rank
+  2   1   0   0   2   1   1   1   2   0  0.739918     10/10      FFT
+  1   2   1   0   2   2   1   1   0   0  0.739918     10/10      NonOverlappingTemplate
+  1   3   0   0   3   3   0   0   0   0  0.035174     10/10      NonOverlappingTemplate
+	... many output lines omitted for clarity ...
+  0   1   1   2   1   1   1   2   0   1  0.911413     10/10      NonOverlappingTemplate
+  4   0   1   2   0   1   0   0   0   2  0.066882      9/10      OverlappingTemplate
+ 10   0   0   0   0   0   0   0   0   0  0.000000 *    0/10   *  Universal
+  0   1   1   2   0   1   3   1   1   0  0.534146     10/10      ApproximateEntropy
+  0   2   0   0   0   0   0   0   0   0     ----       2/2       RandomExcursions
+  0   0   0   0   1   0   1   0   0   0     ----       2/2       RandomExcursions
+  0   0   0   0   1   0   0   1   0   0     ----       2/2       RandomExcursions
+  0   0   0   0   0   0   1   1   0   0     ----       2/2       RandomExcursions
+  0   0   1   0   0   0   0   1   0   0     ----       2/2       RandomExcursions
+  0   0   1   0   0   0   0   0   0   1     ----       2/2       RandomExcursions
+  0   0   0   1   0   0   1   0   0   0     ----       2/2       RandomExcursions
+  0   1   0   0   1   0   0   0   0   0     ----       2/2       RandomExcursions
+  0   0   0   1   0   0   0   1   0   0     ----       2/2       RandomExcursionsVariant
+  0   0   0   1   0   0   0   1   0   0     ----       2/2       RandomExcursionsVariant
+  0   0   0   1   0   0   0   0   0   1     ----       2/2       RandomExcursionsVariant
+  0   0   0   1   0   1   0   0   0   0     ----       2/2       RandomExcursionsVariant
+  0   0   0   0   1   1   0   0   0   0     ----       2/2       RandomExcursionsVariant
+  0   0   0   0   2   0   0   0   0   0     ----       2/2       RandomExcursionsVariant
+  0   0   0   1   1   0   0   0   0   0     ----       2/2       RandomExcursionsVariant
+  0   0   0   0   0   1   1   0   0   0     ----       2/2       RandomExcursionsVariant
+  0   0   0   0   0   2   0   0   0   0     ----       2/2       RandomExcursionsVariant
+  0   1   0   0   0   0   0   0   0   1     ----       2/2       RandomExcursionsVariant
+  0   1   0   0   0   0   0   0   1   0     ----       2/2       RandomExcursionsVariant
+  0   1   0   1   0   0   0   0   0   0     ----       2/2       RandomExcursionsVariant
+  0   1   1   0   0   0   0   0   0   0     ----       2/2       RandomExcursionsVariant
+  0   1   0   1   0   0   0   0   0   0     ----       2/2       RandomExcursionsVariant
+  0   0   2   0   0   0   0   0   0   0     ----       2/2       RandomExcursionsVariant
+  0   0   1   1   0   0   0   0   0   0     ----       2/2       RandomExcursionsVariant
+  0   0   1   0   1   0   0   0   0   0     ----       2/2       RandomExcursionsVariant
+  0   1   0   0   0   0   1   0   0   0     ----       2/2       RandomExcursionsVariant
+  3   0   2   1   0   0   1   0   1   2  0.350485      9/10      Serial
+  2   2   1   1   0   2   0   0   0   2  0.534146      9/10      Serial
+  2   2   1   0   0   1   1   0   2   1  0.739918     10/10      LinearComplexity
+
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+The minimum pass rate for each statistical test with the exception of the
+random excursion (variant) test is approximately = 8 for a
+sample size = 10 binary sequences.
+
+The minimum pass rate for the random excursion (variant) test
+is approximately = 1 for a sample size = 2 binary sequences.
+
+For further guidelines construct a probability table using the MAPLE program
+provided in the addendum section of the documentation.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+```
+
+## Notes on using the package
+
+### Test input scripts
+
+If you are careful, you can supply answers in a text file.
+
+The top-level directory `test` is intended for input scripts for test purposes. Currently defined:
+
+- `test/data-pi-all-10-streams.txt` contains the inputs used in [Sample run for known input](#sample-run-for-known-input), above, and so can be used to quickly reproduce the results above. Use:
+
+  ```bash
+  ./assess 100000 <../test/data-pi-all-10-streams.txt
+  ```
+
+### Result locations
+
+The results show up in different subdirectories depending on the algorithm chosen in the first menu. The correspondence is:
+
+| Choice | Menu Description | Output Location | Output File 
+|:------:|------------------|-----------------|------------|
+0 | Input File | `Algorithm-Testing` | `experiments/AlgorithmTesting/finalAnalysisReport.txt`
+1 | Linear Congruential | `LCG` | `experiments/LCG/finalAnalysisReport.txt`
+2 | Quadratic Congruential I | `QCG1` | `experiments/QCG1/finalAnalysisReport.txt`
+3 | Quadratic Congruential II | `QCG2` | `experiments/QCG2/finalAnalysisReport.txt`
+4 | Cubic Congruential | `CCG` | `experiments/CCG/finalAnalysisReport.txt`
+5 | XOR | `XOR` | `experiments/XOR/finalAnalysisReport.txt`
+6 | Modular Exponentiation | `MODEXP` | `experiments/MODEXP/finalAnalysisReport.txt`
+7 | Blum-Blum-Shub | `BBS` | `experiments/BBS/finalAnalysisReport.txt`
+8 | Micali-Schnorr | `MS` | `experiments/MS/finalAnalysisReport.txt`
+9 | G Using SHA-1 | `G-SHA1` | `experiments/G-SHA1/finalAnalysisReport.txt`
+
+### Bitstreams, the parameter to `assess`, and data files
+
+`assess` tests a random number generator by looking at several "bit streams" from that random number generator. The parameter to the `assess` command is the _length_ of each tested bitstream.
+
+Each tested bit stream must pass a variety of tests. Generally speaking, `assess` must test many bit streams before coming to a judgment. The practical minimum is 10 bit streams. The number of bit streams comes from your answer to this question:
+
+```console
+   How many bitstreams?
+```
+
+Data files are assumed to contain sequences of random *bits*, i.e., coin flips.  "ASCII" files contains series of `0` and `1` characters, one per bit. (Whitespace is ignored.)  "Binary" files contains series of binary bytes, with 8 bits per byte. (All bytes are taken as data.)
+
+When providing data in a file, you must provide enough data for the entire test, i.e. your file must contain `nBitStreams * lengthBitStream` bits. `lengthBitStream` comes from the command line; `nBitStreams` comes from interactive input. If you supply extra bits in your data file, that's OK; extra bits are ignored. But if you don't supply enough bits in your data file, `assess` will exit with a failure:
+
+```console
+     Statistical Testing In Progress.........
+
+ERROR:  Insufficient data in file data/data.pi.  4882 bits were read.
+free(): double free detected in tcache 2
+Aborted (core dumped)
+```
+
+For example, `data.pi` contains 1,004,882 bits of data (calculated using `tr -dc 01 <data/data.pi | wc`).  This means you can test 10 streams of 100,000 bits (ignoring the last 4,882 bits), or 100 streams of 10,000 bits, and so on.
+
+### Random Number Generators and floating-point data
+
+If you are testing a random-number generator that returns floats, you have to figure out how to turn that into a sequence of random bits. Almost always, you're using the floats to map into some other continuous or discrete distribution, and that maps some number of random bits from the float into some other number of random bits in your app. There are subtle questions about how best to do that.
+
+If you're familiar with floating-point representation, you can extract the bit sequence from a binary representation of your float, but you have to be careful to extract the right number of bits, and you must take care to avoid round-off error.
+
+If you're not very familiar with floating-point representation, it's best to find the API for your generator that will return uniformly distributed _integers_. Generate integers that are distributed uniformly over a power of two (e.g., in the range 0 to 255), and convert each integer to binary as an ASCII string. Packing into bytes is not necessary, and is tricky if your generator is not generating numbers that are distributed uniformly over the range from 0 to 255.
+
+## Anomalies
+
+I've noted the following:
+
+1. The manual says that the data files were generated with a million bits. However, an "assess" test asking for a million bits will run out of data. In fact, there are only enough bits to support an assess value of 100,000.
+
+2. If you try to run an analysis on more bits than are present, you get a core dump.
+
+    ```console
+    $ assess 1000000 <../test/data-pi-all-10-streams.txt
+        {output omitted}
+         Statistical Testing In Progress.........
+    
+    ERROR:  Insufficient data in file data/data.pi.  4882 bits were read.
+    *** Error in `./assess': double free or corruption (!prev): 0x00000000017e1b10 ***
+    ======= Backtrace: =========
+        {output omitted}
+    Aborted (core dumped)
+    $
+    ```
+
+3. Several of the generators seem to generate `igamc: UNDERFLOW` errors over and over during the test. These are all generators that fail the tests, so I assume it's due to insufficient randomness. The message comes from function `cephes_igamc()` in file `cephes.c`; this is used many places, and I've not tracked down which test is causing this.
